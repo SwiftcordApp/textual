@@ -52,27 +52,29 @@ struct WithInlineStyle<Content: View>: View {
 
     for run in attributedString.runs {
       var attributes = AttributeContainer()
+      var runEnvironment = environment
+      runEnvironment.font = run.font ?? environment.font
 
       if let intent = run.inlinePresentationIntent {
         if intent.contains(.code) {
-          style.code.apply(in: &attributes, environment: environment)
+          style.code.apply(in: &attributes, environment: runEnvironment)
         }
 
         if intent.contains(.emphasized) {
-          style.emphasis.apply(in: &attributes, environment: environment)
+          style.emphasis.apply(in: &attributes, environment: runEnvironment)
         }
 
         if intent.contains(.stronglyEmphasized) {
-          style.strong.apply(in: &attributes, environment: environment)
+          style.strong.apply(in: &attributes, environment: runEnvironment)
         }
 
         if intent.contains(.strikethrough) {
-          style.strikethrough.apply(in: &attributes, environment: environment)
+          style.strikethrough.apply(in: &attributes, environment: runEnvironment)
         }
       }
 
       if run.link != nil {
-        style.link.apply(in: &attributes, environment: environment)
+        style.link.apply(in: &attributes, environment: runEnvironment)
       }
 
       output[run.range].mergeAttributes(attributes, mergePolicy: .keepNew)

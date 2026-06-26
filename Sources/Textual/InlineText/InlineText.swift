@@ -99,27 +99,48 @@ public struct InlineText: View {
 
   private let markup: String
   private let parser: any MarkupParser
+  private let resolvesURLAttachments: Bool
 
   /// Creates inline text from markup using the given ``MarkupParser`` implementation.
   ///
   /// - Parameters:
   ///   - markup: The markup string to parse and display.
   ///   - parser: The parser to use for converting markup to attributed content.
-  public init(_ markup: String, parser: any MarkupParser) {
+  ///   - resolvesURLAttachments: Whether Textual should resolve `imageURL` and `emojiURL`
+  ///     attributes into attachments before rendering. Pass `false` when the parser emits final
+  ///     `textual.attachment` values directly and cannot produce URL-backed attachments.
+  public init(
+    _ markup: String,
+    parser: any MarkupParser,
+    resolvesURLAttachments: Bool = true
+  ) {
     self.markup = markup
     self.parser = parser
+    self.resolvesURLAttachments = resolvesURLAttachments
   }
 
   public var body: some View {
-    WithAttachments(attributedString) {
-      WithInlineStyle($0) {
-        TextFragment($0)
-          .modifier(TextSelectionInteraction())
+    content
+      .coordinateSpace(.textContainer)
+      .onChange(of: markup, initial: true) { _, value in
+        self.attributedString = (try? parser.attributedString(for: value)) ?? .init()
       }
+  }
+
+  @ViewBuilder private var content: some View {
+    if resolvesURLAttachments {
+      WithAttachments(attributedString) {
+        styledText($0)
+      }
+    } else {
+      styledText(attributedString)
     }
-    .coordinateSpace(.textContainer)
-    .onChange(of: markup, initial: true) { _, value in
-      self.attributedString = (try? parser.attributedString(for: value)) ?? .init()
+  }
+
+  private func styledText(_ attributedString: AttributedString) -> some View {
+    WithInlineStyle(attributedString) {
+      TextFragment($0)
+        .modifier(TextSelectionInteraction())
     }
   }
 }
@@ -136,17 +157,21 @@ extension InlineText {
   ///     being relative to this URL. If this value is `nil`, the initializer doesn’t resolve URLs.
   ///     The default is `nil`.
   ///   - syntaxExtensions: Custom syntax extensions applied after markdown parsing.
+  ///   - resolvesURLAttachments: Whether Textual should resolve URL-backed attachment attributes
+  ///     before rendering.
   public init(
     markdown: String,
     baseURL: URL? = nil,
-    syntaxExtensions: [AttributedStringMarkdownParser.SyntaxExtension] = []
+    syntaxExtensions: [AttributedStringMarkdownParser.SyntaxExtension] = [],
+    resolvesURLAttachments: Bool = true
   ) {
     self.init(
       markdown,
       parser: .inlineMarkdown(
         baseURL: baseURL,
         syntaxExtensions: syntaxExtensions
-      )
+      ),
+      resolvesURLAttachments: resolvesURLAttachments
     )
   }
 }

@@ -30,16 +30,20 @@ struct WithAttachments<Content: View>: View {
     self.content = content
   }
 
-  var body: some View {
-    content(model.resolvedAttributedString ?? attributedString)
-      .task(id: attributedString) {
-        await model.resolveAttachments(
-          in: attributedString,
-          imageAttachmentLoader: imageAttachmentLoader,
-          emojiAttachmentLoader: emojiAttachmentLoader,
-          environment: colorEnvironment
-        )
-      }
+  @ViewBuilder var body: some View {
+    if attributedString.containsValues(for: [\.imageURL, \.textual.emojiURL]) {
+      content(model.resolvedAttributedString ?? attributedString)
+        .task(id: attributedString) {
+          await model.resolveAttachments(
+            in: attributedString,
+            imageAttachmentLoader: imageAttachmentLoader,
+            emojiAttachmentLoader: emojiAttachmentLoader,
+            environment: colorEnvironment
+          )
+        }
+    } else {
+      content(attributedString)
+    }
   }
 }
 

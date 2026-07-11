@@ -4,6 +4,28 @@ import Testing
 @testable import Textual
 
 struct FontProviderTests {
+  #if targetEnvironment(macCatalyst)
+    @Test func macCatalystTextStyleRawValues() {
+      let mappings: [(Font.TextStyle, String)] = [
+        (.largeTitle, "UICTFontTextStyleTitle0"),
+        (.title, "UICTFontTextStyleTitle1"),
+        (.title2, "UICTFontTextStyleTitle2"),
+        (.title3, "UICTFontTextStyleTitle3"),
+        (.headline, "UICTFontTextStyleHeadline"),
+        (.subheadline, "UICTFontTextStyleSubhead"),
+        (.body, "UICTFontTextStyleBody"),
+        (.callout, "UICTFontTextStyleCallout"),
+        (.footnote, "UICTFontTextStyleFootnote"),
+        (.caption, "UICTFontTextStyleCaption1"),
+        (.caption2, "UICTFontTextStyleCaption2"),
+      ]
+
+      for (textStyle, expectedRawValue) in mappings {
+        #expect(PlatformFont.TextStyle(textStyle).rawValue == expectedRawValue)
+      }
+    }
+  #endif
+
   @Test(
     arguments: [
       Font.system(.body, design: .default, weight: .medium),

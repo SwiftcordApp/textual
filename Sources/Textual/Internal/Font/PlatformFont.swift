@@ -40,44 +40,71 @@ extension FontDescriptor {
 
 extension PlatformFont.TextStyle {
   init(_ textStyle: Font.TextStyle) {
-    switch textStyle {
-    case .largeTitle:
-      #if os(tvOS)
+    #if targetEnvironment(macCatalyst)
+      // Xcode 27 binds the UIKit text-style globals to AppKit, where they aren't available when back-deploying to
+      // macOS 26. Constructing the typed value from its raw value avoids those invalid imports.
+      self.init(rawValue: textStyle.macCatalystFontTextStyleRawValue)
+    #else
+      switch textStyle {
+      case .largeTitle:
+        #if os(tvOS)
+          self = .title1
+        #else
+          self = .largeTitle
+        #endif
+      case .title:
         self = .title1
-      #else
-        self = .largeTitle
+      case .title2:
+        self = .title2
+      case .title3:
+        self = .title3
+      case .headline:
+        self = .headline
+      case .subheadline:
+        self = .subheadline
+      case .body:
+        self = .body
+      case .callout:
+        self = .callout
+      case .footnote:
+        self = .footnote
+      case .caption:
+        self = .caption1
+      case .caption2:
+        self = .caption2
+      #if os(visionOS)
+        case .extraLargeTitle:
+          self = .extraLargeTitle
+        case .extraLargeTitle2:
+          self = .extraLargeTitle2
       #endif
-    case .title:
-      self = .title1
-    case .title2:
-      self = .title2
-    case .title3:
-      self = .title3
-    case .headline:
-      self = .headline
-    case .subheadline:
-      self = .subheadline
-    case .body:
-      self = .body
-    case .callout:
-      self = .callout
-    case .footnote:
-      self = .footnote
-    case .caption:
-      self = .caption1
-    case .caption2:
-      self = .caption2
-    #if os(visionOS)
-      case .extraLargeTitle:
-        self = .extraLargeTitle
-      case .extraLargeTitle2:
-        self = .extraLargeTitle2
+      @unknown default:
+        self = .body
+      }
     #endif
-    @unknown default:
-      self = .body
-    }
   }
 }
+
+#if targetEnvironment(macCatalyst)
+  extension Font.TextStyle {
+    fileprivate var macCatalystFontTextStyleRawValue: String {
+      switch self {
+      case .largeTitle: "UICTFontTextStyleTitle0"
+      case .title: "UICTFontTextStyleTitle1"
+      case .title2: "UICTFontTextStyleTitle2"
+      case .title3: "UICTFontTextStyleTitle3"
+      case .headline: "UICTFontTextStyleHeadline"
+      case .subheadline: "UICTFontTextStyleSubhead"
+      case .body: "UICTFontTextStyleBody"
+      case .callout: "UICTFontTextStyleCallout"
+      case .footnote: "UICTFontTextStyleFootnote"
+      case .caption: "UICTFontTextStyleCaption1"
+      case .caption2: "UICTFontTextStyleCaption2"
+      @unknown default: "UICTFontTextStyleBody"
+      }
+    }
+  }
+#endif
 
 #if canImport(UIKit)
   extension PlatformFont {

@@ -38,6 +38,10 @@ extension TextFragment {
       self.cache.setObject(Box(self.text), forKey: KeyBox(attachmentSizes))
     }
 
+    func builds(_ content: Content) -> Bool {
+      self.content == content
+    }
+
     func sizeChanged(_ size: CGSize, environment: TextEnvironmentValues) {
       let attachmentSizes = content.attachmentSizes(for: .init(size), in: environment)
       let cacheKey = KeyBox(attachmentSizes)

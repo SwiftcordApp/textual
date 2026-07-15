@@ -95,7 +95,12 @@ import SwiftUI
 ///   .textual.inlineStyle(style)
 /// ```
 public struct InlineText: View {
-  @State private var attributedString = AttributedString()
+  private struct ParsedMarkup {
+    let markup: String
+    let attributedString: AttributedString
+  }
+
+  @State private var parsed: ParsedMarkup?
 
   private let markup: String
   private let parser: any MarkupParser
@@ -120,14 +125,30 @@ public struct InlineText: View {
   }
 
   public var body: some View {
-    content
+    content(resolvedAttributedString)
       .coordinateSpace(.textContainer)
       .onChange(of: markup, initial: true) { _, value in
-        self.attributedString = (try? parser.attributedString(for: value)) ?? .init()
+        guard parsed?.markup != value else { return }
+        parsed = ParsedMarkup(markup: value, attributedString: parse(value))
       }
   }
 
-  @ViewBuilder private var content: some View {
+  // Parsing must be synchronous with the render: an empty first frame that
+  // fills in when a state write lands would make the first layout pass
+  // measure the wrong text height. The state only memoizes the parse for
+  // subsequent renders of the same markup.
+  private var resolvedAttributedString: AttributedString {
+    if let parsed, parsed.markup == markup {
+      return parsed.attributedString
+    }
+    return parse(markup)
+  }
+
+  private func parse(_ markup: String) -> AttributedString {
+    (try? parser.attributedString(for: markup)) ?? .init()
+  }
+
+  @ViewBuilder private func content(_ attributedString: AttributedString) -> some View {
     if resolvesURLAttachments {
       WithAttachments(attributedString) {
         styledText($0)

@@ -16,10 +16,15 @@ import SwiftUI
 // Styling is recomputed whenever the input, style, or environment snapshot changes.
 
 struct WithInlineStyle<Content: View>: View {
+  private struct Resolved {
+    let key: Tuple<AttributedString, InlineStyle, TextEnvironmentValues>
+    let output: AttributedString
+  }
+
   @Environment(\.inlineStyle) private var style
   @Environment(\.textEnvironment) private var environment
 
-  @State private var output: AttributedString?
+  @State private var resolved: Resolved?
 
   private let input: AttributedString
   private let content: (AttributedString) -> Content
@@ -33,21 +38,36 @@ struct WithInlineStyle<Content: View>: View {
   }
 
   var body: some View {
-    content(output ?? AttributedString())
+    content(output)
       .onChange(of: Tuple(input, style, environment), initial: true) { _, newValue in
-        resolve(
-          attributedString: newValue.values.0,
-          style: newValue.values.1,
-          in: newValue.values.2
+        guard resolved?.key != newValue else { return }
+        resolved = Resolved(
+          key: newValue,
+          output: Self.resolve(
+            attributedString: newValue.values.0,
+            style: newValue.values.1,
+            in: newValue.values.2
+          )
         )
       }
   }
 
-  private func resolve(
+  // Styling must be synchronous with the render: output that only appears
+  // once a state write lands would make the first layout pass measure an
+  // empty string. The state only memoizes the resolution for subsequent
+  // renders of the same input.
+  private var output: AttributedString {
+    if let resolved, resolved.key == Tuple(input, style, environment) {
+      return resolved.output
+    }
+    return Self.resolve(attributedString: input, style: style, in: environment)
+  }
+
+  private static func resolve(
     attributedString: AttributedString,
     style: InlineStyle,
     in environment: TextEnvironmentValues
-  ) {
+  ) -> AttributedString {
     var output = attributedString
 
     for run in attributedString.runs {
@@ -80,6 +100,6 @@ struct WithInlineStyle<Content: View>: View {
       output[run.range].mergeAttributes(attributes, mergePolicy: .keepNew)
     }
 
-    self.output = output
+    return output
   }
 }

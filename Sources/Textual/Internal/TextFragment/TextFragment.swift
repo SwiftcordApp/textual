@@ -50,8 +50,16 @@ struct TextFragment<Content: AttributedStringProtocol>: View {
       .modifier(TextLinkInteraction())
   }
 
+  // Text must be built synchronously with the render: a placeholder that
+  // fills in once a state write lands would make the first layout pass
+  // measure an empty string. The state builder takes over once it lands,
+  // since it accumulates container-size-derived attachment sizes that a
+  // per-render builder would lose.
   private var text: Text {
-    textBuilder?.text ?? Text(verbatim: "")
+    if let textBuilder, textBuilder.builds(content) {
+      return textBuilder.text
+    }
+    return TextBuilder(content, environment: textEnvironment).text
   }
 }
 

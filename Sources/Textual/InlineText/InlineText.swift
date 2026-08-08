@@ -95,8 +95,13 @@ import SwiftUI
 ///   .textual.inlineStyle(style)
 /// ```
 public struct InlineText: View {
-  private struct ParsedMarkup {
+  struct ParseInput: Equatable {
     let markup: String
+    let parseDependency: AnyHashable?
+  }
+
+  private struct ParsedMarkup {
+    let input: ParseInput
     let attributedString: AttributedString
   }
 
@@ -105,6 +110,7 @@ public struct InlineText: View {
   private let markup: String
   private let parser: any MarkupParser
   private let resolvesURLAttachments: Bool
+  private let parseDependency: AnyHashable?
 
   /// Creates inline text from markup using the given ``MarkupParser`` implementation.
   ///
@@ -114,23 +120,31 @@ public struct InlineText: View {
   ///   - resolvesURLAttachments: Whether Textual should resolve `imageURL` and `emojiURL`
   ///     attributes into attachments before rendering. Pass `false` when the parser emits final
   ///     `textual.attachment` values directly and cannot produce URL-backed attachments.
+  ///   - parseDependency: An additional value that invalidates the parsed output when it changes.
+  ///     Use this when parser configuration can change independently of `markup`.
   public init(
     _ markup: String,
     parser: any MarkupParser,
-    resolvesURLAttachments: Bool = true
+    resolvesURLAttachments: Bool = true,
+    parseDependency: AnyHashable? = nil
   ) {
     self.markup = markup
     self.parser = parser
     self.resolvesURLAttachments = resolvesURLAttachments
+    self.parseDependency = parseDependency
   }
 
   public var body: some View {
     content(resolvedAttributedString)
       .coordinateSpace(.textContainer)
-      .onChange(of: markup, initial: true) { _, value in
-        guard parsed?.markup != value else { return }
-        parsed = ParsedMarkup(markup: value, attributedString: parse(value))
+      .onChange(of: parseInput, initial: true) { _, input in
+        guard parsed?.input != input else { return }
+        parsed = ParsedMarkup(input: input, attributedString: parse(input.markup))
       }
+  }
+
+  private var parseInput: ParseInput {
+    ParseInput(markup: markup, parseDependency: parseDependency)
   }
 
   // Parsing must be synchronous with the render: an empty first frame that
@@ -138,7 +152,7 @@ public struct InlineText: View {
   // measure the wrong text height. The state only memoizes the parse for
   // subsequent renders of the same markup.
   private var resolvedAttributedString: AttributedString {
-    if let parsed, parsed.markup == markup {
+    if let parsed, parsed.input == parseInput {
       return parsed.attributedString
     }
     return parse(markup)

@@ -100,12 +100,7 @@ public struct InlineText: View {
     let parseDependency: AnyHashable?
   }
 
-  private struct ParsedMarkup {
-    let input: ParseInput
-    let attributedString: AttributedString
-  }
-
-  @State private var parsed: ParsedMarkup?
+  @StateObject private var parsed = ViewOutputCache<ParseInput, AttributedString>()
 
   private let markup: String
   private let parser: any MarkupParser
@@ -137,25 +132,19 @@ public struct InlineText: View {
   public var body: some View {
     content(resolvedAttributedString)
       .coordinateSpace(.textContainer)
-      .onChange(of: parseInput, initial: true) { _, input in
-        guard parsed?.input != input else { return }
-        parsed = ParsedMarkup(input: input, attributedString: parse(input.markup))
-      }
   }
 
   private var parseInput: ParseInput {
     ParseInput(markup: markup, parseDependency: parseDependency)
   }
 
-  // Parsing must be synchronous with the render: an empty first frame that
-  // fills in when a state write lands would make the first layout pass
-  // measure the wrong text height. The state only memoizes the parse for
-  // subsequent renders of the same markup.
+  // Parsing must be synchronous with the render: an empty first frame that fills in later would
+  // make the first layout pass measure the wrong text height. The reference cache memoizes that
+  // synchronous result without an initial @State write and its redundant graph update.
   private var resolvedAttributedString: AttributedString {
-    if let parsed, parsed.input == parseInput {
-      return parsed.attributedString
+    parsed.output(for: parseInput) {
+      parse(markup)
     }
-    return parse(markup)
   }
 
   private func parse(_ markup: String) -> AttributedString {

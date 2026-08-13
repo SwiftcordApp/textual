@@ -27,7 +27,8 @@ import SwiftUI
 
 struct TextFragment<Content: AttributedStringProtocol>: View {
   @Environment(\.textEnvironment) private var textEnvironment
-  @State private var textBuilder: TextBuilder?
+  @StateObject private var textBuilders =
+    ViewOutputCache<Tuple<Content, TextEnvironmentValues>, TextBuilder>()
 
   private let content: Content
 
@@ -36,30 +37,50 @@ struct TextFragment<Content: AttributedStringProtocol>: View {
   }
 
   var body: some View {
+    let textBuilder = textBuilder
+    let attachments = content.attachments()
+
+    fragment(textBuilder.text, attachments: attachments)
+      .modifier(AttachmentGeometryModifier(textBuilder: textBuilder, attachments: attachments))
+  }
+
+  private func fragment(_ text: Text, attachments: Set<AnyAttachment>) -> some View {
     text
       .customAttribute(TextFragmentAttribute())
-      .onGeometryChange(for: CGSize?.self, of: \.textContainerSize) { size in
-        guard let size, let textBuilder else { return }
-        textBuilder.sizeChanged(size, environment: textEnvironment)
-      }
-      .onChange(of: content, initial: true) { _, newValue in
-        self.textBuilder = TextBuilder(newValue, environment: textEnvironment)
-      }
       .modifier(TextSelectionBackground())
-      .modifier(AttachmentOverlay(attachments: content.attachments()))
+      .modifier(AttachmentOverlay(attachments: attachments))
       .modifier(TextLinkInteraction())
   }
 
-  // Text must be built synchronously with the render: a placeholder that
-  // fills in once a state write lands would make the first layout pass
-  // measure an empty string. The state builder takes over once it lands,
-  // since it accumulates container-size-derived attachment sizes that a
-  // per-render builder would lose.
-  private var text: Text {
-    if let textBuilder, textBuilder.builds(content) {
-      return textBuilder.text
+  // The builder must exist synchronously for correct first-pass measurement, but copying it into
+  // @State after that pass needlessly lays out the same text again. The retained builder still
+  // publishes real attachment-size changes through Observation.
+  private var textBuilder: TextBuilder {
+    let key = Tuple(content, textEnvironment)
+    return textBuilders.output(for: key) {
+      TextBuilder(key.values.0, environment: key.values.1)
     }
-    return TextBuilder(content, environment: textEnvironment).text
+  }
+}
+
+private struct AttachmentGeometryModifier<
+  AttributedContent: AttributedStringProtocol
+>: ViewModifier {
+  @Environment(\.textEnvironment) private var textEnvironment
+
+  let textBuilder: TextFragment<AttributedContent>.TextBuilder
+  let attachments: Set<AnyAttachment>
+
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    if attachments.isEmpty {
+      content
+    } else {
+      content.onGeometryChange(for: CGSize?.self, of: \.textContainerSize) { size in
+        guard let size else { return }
+        textBuilder.sizeChanged(size, environment: textEnvironment)
+      }
+    }
   }
 }
 

@@ -16,15 +16,11 @@ import SwiftUI
 // Styling is recomputed whenever the input, style, or environment snapshot changes.
 
 struct WithInlineStyle<Content: View>: View {
-  private struct Resolved {
-    let key: Tuple<AttributedString, InlineStyle, TextEnvironmentValues>
-    let output: AttributedString
-  }
-
   @Environment(\.inlineStyle) private var style
   @Environment(\.textEnvironment) private var environment
 
-  @State private var resolved: Resolved?
+  @StateObject private var resolved =
+    ViewOutputCache<Tuple<AttributedString, InlineStyle, TextEnvironmentValues>, AttributedString>()
 
   private let input: AttributedString
   private let content: (AttributedString) -> Content
@@ -39,28 +35,19 @@ struct WithInlineStyle<Content: View>: View {
 
   var body: some View {
     content(output)
-      .onChange(of: Tuple(input, style, environment), initial: true) { _, newValue in
-        guard resolved?.key != newValue else { return }
-        resolved = Resolved(
-          key: newValue,
-          output: Self.resolve(
-            attributedString: newValue.values.0,
-            style: newValue.values.1,
-            in: newValue.values.2
-          )
-        )
-      }
   }
 
-  // Styling must be synchronous with the render: output that only appears
-  // once a state write lands would make the first layout pass measure an
-  // empty string. The state only memoizes the resolution for subsequent
-  // renders of the same input.
+  // Styling must be synchronous with the render. Cache the result without copying it into @State,
+  // which would invalidate an already-correct first layout pass.
   private var output: AttributedString {
-    if let resolved, resolved.key == Tuple(input, style, environment) {
-      return resolved.output
+    let key = Tuple(input, style, environment)
+    return resolved.output(for: key) {
+      Self.resolve(
+        attributedString: key.values.0,
+        style: key.values.1,
+        in: key.values.2
+      )
     }
-    return Self.resolve(attributedString: input, style: style, in: environment)
   }
 
   private static func resolve(

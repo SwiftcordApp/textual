@@ -22,6 +22,7 @@ extension TextFragment {
 
     @ObservationIgnored private let content: Content
     @ObservationIgnored private let cache: NSCache<KeyBox<[AttachmentKey: CGSize]>, Box<Text>>
+    @ObservationIgnored private var attachmentSizes: [AttachmentKey: CGSize]
 
     init(_ content: Content, environment: TextEnvironmentValues) {
       let attachmentSizes = content.attachmentSizes(for: .unspecified, in: environment)
@@ -33,17 +34,17 @@ extension TextFragment {
       )
       self.content = content
       self.cache = NSCache()
+      self.attachmentSizes = attachmentSizes
       self.cache.countLimit = 10
 
       self.cache.setObject(Box(self.text), forKey: KeyBox(attachmentSizes))
     }
 
-    func builds(_ content: Content) -> Bool {
-      self.content == content
-    }
-
     func sizeChanged(_ size: CGSize, environment: TextEnvironmentValues) {
       let attachmentSizes = content.attachmentSizes(for: .init(size), in: environment)
+      guard attachmentSizes != self.attachmentSizes else { return }
+
+      self.attachmentSizes = attachmentSizes
       let cacheKey = KeyBox(attachmentSizes)
 
       if let text = cache.object(forKey: cacheKey) {

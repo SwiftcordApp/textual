@@ -28,33 +28,13 @@
     }
 
     func blockRange(for position: TextPosition) -> TextRange? {
-      guard layouts.indices.contains(position.indexPath.layout) else {
+      let layoutIndex = position.indexPath.layout
+      guard let end = selectableEndPosition(in: layoutIndex) else {
         return nil
       }
-
-      let layout = layouts[position.indexPath.layout]
-
-      guard
-        let line = layout.lines.last,
-        let run = line.runs.last
-      else {
-        return nil
-      }
-
       return TextRange(
-        start: .init(
-          indexPath: .init(layout: position.indexPath.layout),
-          affinity: .downstream
-        ),
-        end: .init(
-          indexPath: .init(
-            runSlice: run.slices.endIndex - 1,
-            run: line.runs.endIndex - 1,
-            line: layout.lines.endIndex - 1,
-            layout: position.indexPath.layout
-          ),
-          affinity: .upstream
-        )
+        start: .init(indexPath: .init(layout: layoutIndex), affinity: .downstream),
+        end: end
       )
     }
 
@@ -62,28 +42,15 @@
       guard layouts.indices.contains(layoutIndex) else {
         return nil
       }
-
-      let layout = layouts[layoutIndex]
-
-      guard
-        let lastLine = layout.lines.last,
-        let lastRun = lastLine.runs.last
-      else {
+      guard layouts[layoutIndex].selectionEndIndex != nil else {
+        return range
+      }
+      guard let end = selectableEndPosition(in: layoutIndex) else {
         return nil
       }
-
       let start = TextPosition(
         indexPath: .init(layout: layoutIndex),
         affinity: .downstream
-      )
-      let end = TextPosition(
-        indexPath: .init(
-          runSlice: lastRun.slices.endIndex - 1,
-          run: lastLine.runs.endIndex - 1,
-          line: layout.lines.endIndex - 1,
-          layout: layoutIndex
-        ),
-        affinity: .upstream
       )
 
       guard range.end > start && range.start < end else {

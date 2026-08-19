@@ -87,7 +87,9 @@
 
   extension TextSelectionModel {
     var hasText: Bool {
-      layoutCollection.stringLength > 0
+      layoutCollection.hasSelectionEnd
+        ? layoutCollection.selectableEndPosition != nil
+        : layoutCollection.stringLength > 0
     }
 
     var startPosition: TextPosition {
@@ -132,6 +134,7 @@
 
     func closestPosition(to point: CGPoint) -> TextPosition? {
       layoutCollection.closestPosition(to: point)
+        .flatMap(layoutCollection.clampToSelectableContent)
     }
 
     func closestPosition(to point: CGPoint, within range: TextRange) -> TextPosition? {
@@ -143,6 +146,8 @@
 
     func isPositionAtBlockBoundary(_ position: TextPosition) -> Bool {
       layoutCollection.isPositionAtBlockBoundary(position)
+        || (layoutCollection.layouts[position.indexPath.layout].selectionEndIndex != nil
+          && position == layoutCollection.selectableEndPosition(in: position.indexPath.layout))
     }
 
     func positionAbove(_ position: TextPosition, anchor: TextPosition) -> TextPosition? {
@@ -154,7 +159,10 @@
     }
 
     func characterRange(at point: CGPoint) -> TextRange? {
-      layoutCollection.characterRange(at: point)
+      guard let range = layoutCollection.characterRange(at: point) else {
+        return nil
+      }
+      return layoutCollection.clampRange(range, layoutIndex: range.start.indexPath.layout)
     }
 
     func blockStart(for position: TextPosition) -> TextPosition? {
@@ -173,7 +181,10 @@
     @available(iOS, unavailable)
     @available(visionOS, unavailable)
     func wordRange(for position: TextPosition) -> TextRange? {
-      layoutCollection.wordRange(for: position)
+      guard let range = layoutCollection.wordRange(for: position) else {
+        return nil
+      }
+      return layoutCollection.clampRange(range, layoutIndex: position.indexPath.layout)
     }
 
     @available(macOS 10.0, *)
@@ -181,6 +192,7 @@
     @available(visionOS, unavailable)
     func nextWord(from position: TextPosition) -> TextPosition? {
       layoutCollection.nextWord(from: position)
+        .flatMap(layoutCollection.clampToSelectableContent)
     }
 
     @available(macOS 10.0, *)

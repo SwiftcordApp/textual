@@ -39,12 +39,15 @@
 
   protocol TextLayout {
     var attributedString: NSAttributedString { get }
+    var selectionEndIndex: Int? { get }
     var origin: CGPoint { get }
     var bounds: CGRect { get }
     var lines: [any TextLine] { get }
   }
 
   extension TextLayout {
+    var selectionEndIndex: Int? { nil }
+
     var frame: CGRect {
       bounds.offsetBy(dx: origin.x, dy: origin.y)
     }

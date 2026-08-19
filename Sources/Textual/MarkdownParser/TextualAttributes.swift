@@ -18,11 +18,20 @@ extension AttributeScopes {
       public static let name = "Textual.EmojiURL"
     }
 
+    /// Marks a trailing attributed run as outside the selectable text range.
+    public enum SelectionDisabledAttribute: AttributedStringKey {
+      public typealias Value = Bool
+      public static let name = "Textual.SelectionDisabled"
+    }
+
     /// A property for accessing an attachment attribute.
     public let attachment: AttachmentAttribute
 
     /// A property for accessing an emoji URL attribute.
     public let emojiURL: EmojiURLAttribute
+
+    /// A property for excluding a trailing attributed run from text selection.
+    public let selectionDisabled: SelectionDisabledAttribute
 
     public let foundation: AttributeScopes.FoundationAttributes
   }

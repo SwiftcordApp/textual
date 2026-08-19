@@ -45,6 +45,15 @@
       joinedAttributedString.joined
     }
 
+    var selectionEndIndex: Int? {
+      guard
+        let selectionEnd = base.first?.first?[TextSelectionEndAttribute.self]?.characterIndex
+      else {
+        return nil
+      }
+      return min(selectionEnd, attributedString.length)
+    }
+
     let origin: CGPoint
 
     private(set) lazy var bounds: CGRect = makeBounds()

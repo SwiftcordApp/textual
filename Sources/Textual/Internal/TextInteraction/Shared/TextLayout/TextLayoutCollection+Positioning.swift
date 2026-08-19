@@ -2,6 +2,10 @@
   import SwiftUI
 
   extension TextLayoutCollection {
+    var hasSelectionEnd: Bool {
+      layouts.contains { $0.selectionEndIndex != nil }
+    }
+
     var startPosition: TextPosition {
       TextPosition(
         indexPath: .init(runSlice: 0, run: 0, line: 0, layout: 0),
@@ -10,29 +14,59 @@
     }
 
     var endPosition: TextPosition {
-      guard
-        let layout = layouts.last,
-        let line = layout.lines.last,
-        let run = line.runs.last
-      else {
-        return startPosition
+      if hasSelectionEnd {
+        return selectableEndPosition ?? startPosition
       }
-      return TextPosition(
-        indexPath: .init(
-          runSlice: run.slices.endIndex - 1,
-          run: line.runs.endIndex - 1,
-          line: layout.lines.endIndex - 1,
-          layout: layouts.endIndex - 1
-        ),
-        affinity: .upstream
-      )
+      return layouts.indices.last.flatMap(unrestrictedEndPosition(in:)) ?? startPosition
+    }
+
+    var selectableEndPosition: TextPosition? {
+      layouts.indices.reversed().lazy.compactMap(selectableEndPosition(in:)).first
+    }
+
+    func selectableEndPosition(in layoutIndex: Int) -> TextPosition? {
+      guard layouts.indices.contains(layoutIndex) else {
+        return nil
+      }
+
+      guard let selectionEndIndex = layouts[layoutIndex].selectionEndIndex else {
+        return unrestrictedEndPosition(in: layoutIndex)
+      }
+      guard selectionEndIndex > 0 else {
+        return nil
+      }
+      return position(at: layoutIndex, localCharacterIndex: selectionEndIndex)
+    }
+
+    func clampToSelectableContent(_ position: TextPosition) -> TextPosition? {
+      let layoutIndex = position.indexPath.layout
+      guard let selectionEndIndex = layouts[layoutIndex].selectionEndIndex else {
+        return position
+      }
+      guard
+        selectionEndIndex > 0,
+        let end = selectableEndPosition(in: layoutIndex)
+      else {
+        return nil
+      }
+      return localCharacterIndex(at: position) > selectionEndIndex ? end : position
     }
 
     func position(from position: TextPosition, offset: Int) -> TextPosition? {
       let from = characterIndex(at: position)
       let target = from + offset
+      let upperBound: Int
 
-      guard (0...stringLength).contains(target) else {
+      if hasSelectionEnd {
+        guard let selectableEndPosition else {
+          return nil
+        }
+        upperBound = characterIndex(at: selectableEndPosition)
+      } else {
+        upperBound = stringLength
+      }
+
+      guard (0...upperBound).contains(target) else {
         return nil
       }
 
@@ -247,52 +281,32 @@
     }
 
     func blockEnd(for position: TextPosition) -> TextPosition? {
-      guard layouts.indices.contains(position.indexPath.layout) else {
+      guard let end = selectableEndPosition(in: position.indexPath.layout) else {
         return nil
       }
 
-      let layout = layouts[position.indexPath.layout]
-
-      guard
-        let line = layout.lines.last,
-        let run = line.runs.last
-      else {
-        return nil
+      // if we are already at the end, move to the next block
+      if position == end, position.indexPath.layout + 1 < layouts.endIndex {
+        return selectableEndPosition(in: position.indexPath.layout + 1)
       }
 
-      let end = TextPosition(
+      return end
+    }
+
+    private func unrestrictedEndPosition(in layoutIndex: Int) -> TextPosition? {
+      let layout = layouts[layoutIndex]
+      guard let line = layout.lines.last, let run = line.runs.last else {
+        return nil
+      }
+      return TextPosition(
         indexPath: .init(
           runSlice: run.slices.endIndex - 1,
           run: line.runs.endIndex - 1,
           line: layout.lines.endIndex - 1,
-          layout: position.indexPath.layout
+          layout: layoutIndex
         ),
         affinity: .upstream
       )
-
-      // if we are already at the end, move to the next block
-      if position == end, position.indexPath.layout + 1 < layouts.endIndex {
-        let layout = layouts[position.indexPath.layout + 1]
-
-        guard
-          let line = layout.lines.last,
-          let run = line.runs.last
-        else {
-          return nil
-        }
-
-        return TextPosition(
-          indexPath: .init(
-            runSlice: run.slices.endIndex - 1,
-            run: line.runs.endIndex - 1,
-            line: layout.lines.endIndex - 1,
-            layout: position.indexPath.layout + 1
-          ),
-          affinity: .upstream
-        )
-      }
-
-      return end
     }
   }
 

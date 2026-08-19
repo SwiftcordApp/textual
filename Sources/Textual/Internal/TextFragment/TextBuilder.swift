@@ -1,5 +1,9 @@
 import SwiftUI
 
+struct TextSelectionEndAttribute: TextAttribute {
+  let characterIndex: Int
+}
+
 // MARK: - Overview
 //
 // TextBuilder constructs SwiftUI.Text from attributed content with inline attachments.
@@ -69,6 +73,12 @@ extension Text {
     attachmentSizes: [AttachmentKey: CGSize],
     in environment: TextEnvironmentValues
   ) {
+    let selectionEnd = attributedString.runs.first {
+      $0.textual.selectionDisabled == true
+    }.map {
+      String(attributedString.characters[..<$0.range.lowerBound]).utf16.count
+    }
+
     let textValues = attributedString.runs.map { run in
       var text: Text
 
@@ -101,8 +111,13 @@ extension Text {
       return text
     }
 
-    self = textValues.reduce(Text(verbatim: "")) { partialResult, text in
+    let text = textValues.reduce(Text(verbatim: "")) { partialResult, text in
       partialResult + text
+    }
+    self = if let selectionEnd {
+      text.customAttribute(TextSelectionEndAttribute(characterIndex: selectionEnd))
+    } else {
+      text
     }
   }
 

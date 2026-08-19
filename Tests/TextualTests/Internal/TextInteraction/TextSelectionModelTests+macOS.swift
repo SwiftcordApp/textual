@@ -3,9 +3,43 @@
   import SwiftUI
   import Testing
 
+  #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+    import AppKit
+  #endif
+
   @testable import Textual
 
   extension TextSelectionModelTests {
+    #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+      @Test
+      @MainActor
+      func resigningTextInteractionClearsSelection() throws {
+        let model = try TextSelectionModel(fixtureName: "two-paragraphs-bidi")
+        model.selectedRange = TextRange(start: model.startPosition, end: model.endPosition)
+        let interactionView = NSTextInteractionView(
+          model: model,
+          exclusionRects: [],
+          openURL: OpenURLAction { _ in .handled }
+        )
+        let textField = NSTextField()
+        let container = NSView()
+        container.addSubview(interactionView)
+        container.addSubview(textField)
+        let window = NSWindow(
+          contentRect: .zero,
+          styleMask: [],
+          backing: .buffered,
+          defer: false
+        )
+        window.contentView = container
+
+        #expect(window.makeFirstResponder(interactionView))
+
+        #expect(window.makeFirstResponder(textField))
+        #expect(model.selectedRange == nil)
+      }
+    #endif
+
     @Test
     @available(iOS, unavailable)
     @available(visionOS, unavailable)

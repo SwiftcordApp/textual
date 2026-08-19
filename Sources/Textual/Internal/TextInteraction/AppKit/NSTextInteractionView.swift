@@ -18,6 +18,15 @@
     override var acceptsFirstResponder: Bool { true }
     override var isFlipped: Bool { true }
 
+    override func resignFirstResponder() -> Bool {
+      guard super.resignFirstResponder() else {
+        return false
+      }
+
+      resetSelection()
+      return true
+    }
+
     private var dragStart: TextPosition?
     private var selectionAnchor: TextPosition?
 

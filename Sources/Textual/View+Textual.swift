@@ -157,6 +157,11 @@ extension TextualNamespace where Base: View {
     #endif
   }
 
+  /// Controls whether links respond to pointer and tap interaction.
+  @inlinable public func allowsLinkInteraction(_ allowsInteraction: Bool) -> some View {
+    base.environment(\.allowsLinkInteraction, allowsInteraction)
+  }
+
   /// Sets the spacing used between table cells in ``StructuredText``.
   public func tableCellSpacing(
     horizontal: CGFloat? = nil,

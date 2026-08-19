@@ -11,30 +11,46 @@ import SwiftUI
 
 struct TextLinkInteraction: ViewModifier {
   @Environment(\.openURL) private var openURL
+  @Environment(\.allowsLinkInteraction) private var allowsLinkInteraction
+  #if TEXTUAL_ENABLE_TEXT_SELECTION
+    @Environment(\.textSelection) private var textSelection
+  #endif
 
   func body(content: Content) -> some View {
     #if TEXTUAL_ENABLE_LINKS
-      content
-        .overlayPreferenceValue(Text.LayoutKey.self) { value in
-          if let anchoredLayout = value.first {
-            GeometryReader { geometry in
-              Color.clear
-                .contentShape(.rect)
-                .gesture(
-                  tap(
-                    origin: geometry[anchoredLayout.origin],
-                    layout: anchoredLayout.layout
+      if !allowsLinkInteraction || selectionHandlesLinks {
+        content
+      } else {
+        content
+          .overlayPreferenceValue(Text.LayoutKey.self) { value in
+            if let anchoredLayout = value.first {
+              GeometryReader { geometry in
+                Color.clear
+                  .contentShape(.rect)
+                  .gesture(
+                    tap(
+                      origin: geometry[anchoredLayout.origin],
+                      layout: anchoredLayout.layout
+                    )
                   )
-                )
+              }
             }
           }
-        }
+      }
     #else
       content
     #endif
   }
 
   #if TEXTUAL_ENABLE_LINKS
+    private var selectionHandlesLinks: Bool {
+      #if TEXTUAL_ENABLE_TEXT_SELECTION
+        textSelection.allowsSelection
+      #else
+        false
+      #endif
+    }
+
     private func tap(origin: CGPoint, layout: Text.Layout) -> some Gesture {
       SpatialTapGesture()
         .onEnded { value in
@@ -53,4 +69,9 @@ struct TextLinkInteraction: ViewModifier {
         }
     }
   #endif
+}
+
+extension EnvironmentValues {
+  @usableFromInline
+  @Entry var allowsLinkInteraction = true
 }

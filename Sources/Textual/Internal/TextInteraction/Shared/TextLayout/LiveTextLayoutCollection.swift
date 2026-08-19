@@ -18,7 +18,8 @@
 
     func needsPositionReconciliation(with other: any TextLayoutCollection) -> Bool {
       // Same layouts with different origins do not need position reconciliation
-      base.map(\.layout) != (other as? LiveTextLayoutCollection)?.base.map(\.layout)
+      guard let other = other as? LiveTextLayoutCollection else { return true }
+      return !base.elementsEqual(other.base) { $0.layout == $1.layout }
     }
 
     func index(of layout: Text.Layout) -> Int? {

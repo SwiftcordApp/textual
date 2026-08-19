@@ -50,6 +50,46 @@
     }
 
     @Test
+    func documentRevisionTracksStructuralChanges() {
+      // given
+      let model = TextSelectionModel()
+      func collection(_ text: String) -> CodableTextLayoutCollection {
+        .init(
+          _layouts: [
+            .init(
+              attributedString: NSAttributedString(string: text),
+              origin: .zero,
+              bounds: .zero,
+              _lines: []
+            )
+          ]
+        )
+      }
+
+      // when
+      model.setLayoutCollection(collection("Initial"))
+
+      // then
+      #expect(model.documentRevision == 1)
+
+      // when
+      let changedCollection = collection("Changed")
+      model.setLayoutCollection(changedCollection)
+      model.setLayoutCollection(changedCollection)
+      model.selectedRange = TextRange(start: model.startPosition, end: model.startPosition)
+
+      // then
+      #expect(model.documentRevision == 2)
+
+      // when
+      model.setLayoutCollection(EmptyTextLayoutCollection())
+
+      // then
+      #expect(model.documentRevision == 3)
+      #expect(model.selectedRange == nil)
+    }
+
+    @Test
     func startPosition() throws {
       // given
       let model = try TextSelectionModel(fixtureName: "two-paragraphs-bidi")

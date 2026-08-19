@@ -31,6 +31,8 @@
     @ObservationIgnored
     var selectionDidChange: (() -> Void)?
 
+    private(set) var documentRevision = 0
+
     @ObservationIgnored
     private var layoutCollection: any TextLayoutCollection
 
@@ -51,20 +53,21 @@
       }
 
       let oldLayoutCollection = self.layoutCollection
+      let documentChanged = layoutCollection.needsPositionReconciliation(
+        with: oldLayoutCollection
+      )
       self.layoutCollection = layoutCollection
+      guard documentChanged else { return }
 
-      guard
-        let selectedRange,
-        layoutCollection.needsPositionReconciliation(with: oldLayoutCollection)
-      else {
-        return
+      if let selectedRange {
+        // Try to reconcile the selected text range
+        self.selectedRange = layoutCollection.reconcileRange(
+          selectedRange,
+          from: oldLayoutCollection
+        )
       }
 
-      // Try to reconcile the selected text range
-      self.selectedRange = layoutCollection.reconcileRange(
-        selectedRange,
-        from: oldLayoutCollection
-      )
+      documentRevision &+= 1
     }
 
     func setCoordinator(_ coordinator: TextSelectionCoordinator?) {

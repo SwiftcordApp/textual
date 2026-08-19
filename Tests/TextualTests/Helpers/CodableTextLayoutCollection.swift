@@ -15,7 +15,7 @@
     }
 
     func needsPositionReconciliation(with other: any Textual.TextLayoutCollection) -> Bool {
-      false
+      !isEqual(to: other)
     }
 
     func index(of layout: Text.Layout) -> Int? {

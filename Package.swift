@@ -46,7 +46,7 @@ let package = Package(
       ],
       resources: [.copy("Fixtures")],
       swiftSettings: [
-        .define("TEXTUAL_ENABLE_TEXT_SELECTION", .when(platforms: [.macOS, .iOS, .visionOS]))
+        .define("TEXTUAL_ENABLE_TEXT_SELECTION", .when(platforms: [.macOS, .macCatalyst, .iOS, .visionOS]))
       ]
     ),
   ]

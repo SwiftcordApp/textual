@@ -116,6 +116,10 @@
       layoutCollection.characterIndex(at: to) - layoutCollection.characterIndex(at: from)
     }
 
+    func documentOffset(of position: TextPosition) -> Int {
+      layoutCollection.characterIndex(at: position)
+    }
+
     func firstRect(for range: TextRange) -> CGRect {
       layoutCollection.firstRect(for: range)
     }

@@ -56,7 +56,7 @@
         end: min(rawEnd, blockRange.end)
       )
 
-      return TextRangeBox(clampedRange)
+      return box(clampedRange)
     }
 
     func isPosition(
@@ -113,11 +113,11 @@
         case .storage(.forward):
           // Stop at the end of the current layout
           if let layoutEnd = model.blockEnd(for: rawStart) {
-            return TextPositionBox(layoutEnd)
+            return box(layoutEnd)
           }
         case .storage(.backward):
           // Stop at the start of the current layout
-          return TextPositionBox(
+          return box(
             .init(
               indexPath: .init(
                 layout: rawStart.indexPath.layout

@@ -53,6 +53,8 @@
     }
 
     func position(from position: TextPosition, offset: Int) -> TextPosition? {
+      guard offset != 0 else { return position }
+
       let from = characterIndex(at: position)
       let target = from + offset
       let upperBound: Int
@@ -94,10 +96,9 @@
     }
 
     func characterIndex(at position: TextPosition) -> Int {
-      let base = layouts.prefix(position.indexPath.layout)
-        .map(\.attributedString.length)
-        .reduce(0, +)
-      return base + localCharacterIndex(at: position)
+      layouts.prefix(position.indexPath.layout).reduce(localCharacterIndex(at: position)) {
+        $0 + $1.attributedString.length
+      }
     }
 
     func localCharacterIndex(at position: TextPosition) -> Int {

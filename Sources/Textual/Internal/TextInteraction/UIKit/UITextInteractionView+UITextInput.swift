@@ -24,7 +24,7 @@
     }
 
     var selectedTextRange: UITextRange? {
-      get { model.selectedRange.map(TextRangeBox.init) }
+      get { model.selectedRange.map(box) }
       set {
         let rangeBox = newValue as? TextRangeBox
         model.selectedRange = rangeBox?.wrappedValue
@@ -50,11 +50,11 @@
     }
 
     var beginningOfDocument: UITextPosition {
-      TextPositionBox(model.startPosition)
+      TextPositionBox(model.startPosition, documentOffset: 0)
     }
 
     var endOfDocument: UITextPosition {
-      TextPositionBox(model.endPosition)
+      box(model.endPosition)
     }
 
     func textRange(
@@ -72,10 +72,14 @@
 
     func position(from position: UITextPosition, offset: Int) -> UITextPosition? {
       guard let positionBox = position as? TextPositionBox else { return nil }
-      return model.position(
+      guard let position = model.position(
         from: positionBox.wrappedValue,
         offset: offset
-      ).map(TextPositionBox.init)
+      ) else { return nil }
+      return TextPositionBox(
+        position,
+        documentOffset: positionBox.documentOffset + offset
+      )
     }
 
     func position(
@@ -89,12 +93,13 @@
 
     func compare(_ position: UITextPosition, to other: UITextPosition) -> ComparisonResult {
       guard
-        let lhs = position as? TextPositionBox, let rhs = other as? TextPositionBox,
-        lhs.wrappedValue != rhs.wrappedValue
+        let lhs = position as? TextPositionBox,
+        let rhs = other as? TextPositionBox,
+        lhs.documentOffset != rhs.documentOffset
       else {
         return .orderedSame
       }
-      return lhs.wrappedValue < rhs.wrappedValue ? .orderedAscending : .orderedDescending
+      return lhs.documentOffset < rhs.documentOffset ? .orderedAscending : .orderedDescending
     }
 
     func offset(from fromPosition: UITextPosition, to toPosition: UITextPosition) -> Int {
@@ -102,7 +107,7 @@
         let from = fromPosition as? TextPositionBox,
         let to = toPosition as? TextPositionBox
       else { return 0 }
-      return model.offset(from: from.wrappedValue, to: to.wrappedValue)
+      return to.documentOffset - from.documentOffset
     }
 
     var tokenizer: any UITextInputTokenizer {
@@ -154,7 +159,7 @@
     }
 
     func closestPosition(to point: CGPoint) -> UITextPosition? {
-      model.closestPosition(to: point).map(TextPositionBox.init)
+      model.closestPosition(to: point).map(box)
     }
 
     func closestPosition(to point: CGPoint, within range: UITextRange) -> UITextPosition? {
@@ -162,11 +167,11 @@
       return model.closestPosition(
         to: point,
         within: rangeBox.wrappedValue
-      ).map(TextPositionBox.init)
+      ).map(box)
     }
 
     func characterRange(at point: CGPoint) -> UITextRange? {
-      model.characterRange(at: point).map(TextRangeBox.init)
+      model.characterRange(at: point).map(box)
     }
 
     var textInputView: UIView {
@@ -180,6 +185,17 @@
     func attributedText(in range: UITextRange) -> NSAttributedString {
       guard let rangeBox = range as? TextRangeBox else { return .init() }
       return model.attributedText(in: rangeBox.wrappedValue)
+    }
+
+    func box(_ position: TextPosition) -> TextPositionBox {
+      TextPositionBox(
+        position,
+        documentOffset: model.documentOffset(of: position)
+      )
+    }
+
+    func box(_ range: TextRange) -> TextRangeBox {
+      TextRangeBox(start: box(range.start), end: box(range.end))
     }
   }
 #endif

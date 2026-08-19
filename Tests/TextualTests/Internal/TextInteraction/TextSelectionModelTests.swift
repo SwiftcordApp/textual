@@ -120,12 +120,16 @@
     func positionFromOffsetZero() throws {
       // given
       let model = try TextSelectionModel(fixtureName: "two-paragraphs-bidi")
+      let position = TextPosition(
+        indexPath: .init(runSlice: 1, run: 2, line: 0, layout: 0),
+        affinity: .downstream
+      )
 
       // when
-      let result = model.position(from: model.startPosition, offset: 0)
+      let result = model.position(from: position, offset: 0)
 
       // then
-      #expect(result == model.startPosition)
+      #expect(result == position)
     }
 
     @Test

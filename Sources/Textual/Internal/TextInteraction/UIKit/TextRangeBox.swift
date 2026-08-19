@@ -25,7 +25,20 @@
     }
 
     override var isEmpty: Bool {
-      _start.wrappedValue == _end.wrappedValue
+      _start.documentOffset == _end.documentOffset
+    }
+
+    override func isEqual(_ object: Any?) -> Bool {
+      guard let other = object as? TextRangeBox else { return false }
+      return _start.documentOffset == other._start.documentOffset
+        && _end.documentOffset == other._end.documentOffset
+    }
+
+    override var hash: Int {
+      var hasher = Hasher()
+      hasher.combine(_start.documentOffset)
+      hasher.combine(_end.documentOffset)
+      return hasher.finalize()
     }
 
     init(start: TextPositionBox, end: TextPositionBox) {
@@ -39,7 +52,9 @@
     }
 
     convenience init(from: TextPositionBox, to: TextPositionBox) {
-      if from.wrappedValue <= to.wrappedValue {
+      if from.documentOffset < to.documentOffset
+        || (from.documentOffset == to.documentOffset && from.wrappedValue <= to.wrappedValue)
+      {
         self.init(start: from, end: to)
       } else {
         self.init(start: to, end: from)
@@ -48,10 +63,6 @@
 
     convenience init(position: TextPositionBox) {
       self.init(start: position, end: position)
-    }
-
-    convenience init(_ range: TextRange) {
-      self.init(start: .init(range.start), end: .init(range.end))
     }
   }
 #endif

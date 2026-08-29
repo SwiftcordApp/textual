@@ -36,12 +36,14 @@ struct TextFragment<Content: AttributedStringProtocol>: View {
     self.content = content
   }
 
-  var body: some View {
-    let textBuilder = textBuilder
-    let attachments = content.attachments()
+  @ViewBuilder var body: some View {
+    if !content.runs.isEmpty {
+      let textBuilder = textBuilder
+      let attachments = content.attachments()
 
-    fragment(textBuilder.text, attachments: attachments)
-      .modifier(AttachmentGeometryModifier(textBuilder: textBuilder, attachments: attachments))
+      fragment(textBuilder.text, attachments: attachments)
+        .modifier(AttachmentGeometryModifier(textBuilder: textBuilder, attachments: attachments))
+    }
   }
 
   private func fragment(_ text: Text, attachments: Set<AnyAttachment>) -> some View {

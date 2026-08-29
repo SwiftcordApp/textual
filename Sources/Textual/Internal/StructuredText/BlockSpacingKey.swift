@@ -9,3 +9,7 @@ extension StructuredText {
     }
   }
 }
+
+extension EnvironmentValues {
+  @Entry var topLevelBlockSpacing: CGFloat?
+}

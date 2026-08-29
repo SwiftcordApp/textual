@@ -29,6 +29,14 @@ extension TextualNamespace where Base: View {
     }
   }
 
+  /// Sets uniform spacing between the top-level blocks in ``StructuredText``.
+  ///
+  /// The block container resolves this value during its first layout pass, making it suitable for
+  /// views whose size must be measured synchronously.
+  public func topLevelBlockSpacing(_ spacing: CGFloat) -> some View {
+    base.environment(\.topLevelBlockSpacing, spacing)
+  }
+
   /// Sets line spacing using a font-relative value.
   @MainActor public func lineSpacing(_ lineSpacing: FontScaled<CGFloat>) -> some View {
     WithFontScaledValue(lineSpacing) {
@@ -167,9 +175,9 @@ extension TextualNamespace where Base: View {
     horizontal: CGFloat? = nil,
     vertical: CGFloat? = nil
   ) -> some View {
-    base.preference(
-      key: StructuredText.TableCell.SpacingKey.self,
-      value: .init(horizontal: horizontal, vertical: vertical)
+    base.environment(
+      \.tableCellSpacing,
+      StructuredText.TableCell.Spacing(horizontal: horizontal, vertical: vertical)
     )
   }
 

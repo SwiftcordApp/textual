@@ -11,8 +11,6 @@ extension StructuredText {
   struct Table: View {
     @Environment(\.tableStyle) private var tableStyle
 
-    @State private var spacing = TableCell.Spacing()
-
     private let intent: PresentationIntent.IntentType?
     private let content: AttributedSubstring
     private let columns: [PresentationIntent.TableColumn]
@@ -33,15 +31,30 @@ extension StructuredText {
         indentationLevel: indentationLevel
       )
       let resolvedStyle = tableStyle.resolve(configuration: configuration)
-        .onPreferenceChange(TableCell.SpacingKey.self) { @MainActor in
-          spacing = $0
-        }
 
       AnyView(resolvedStyle)
     }
 
     @ViewBuilder
     private var label: some View {
+      TableGrid(intent: intent, content: content, columns: columns)
+    }
+
+    private var indentationLevel: Int {
+      content.runs.first?.presentationIntent?.indentationLevel ?? 0
+    }
+  }
+}
+
+extension StructuredText.Table {
+  private struct TableGrid: View {
+    @Environment(\.tableCellSpacing) private var spacing
+
+    let intent: PresentationIntent.IntentType?
+    let content: AttributedSubstring
+    let columns: [PresentationIntent.TableColumn]
+
+    var body: some View {
       let rowRuns = content.blockRuns(parent: intent)
 
       Grid(horizontalSpacing: spacing.horizontal, verticalSpacing: spacing.vertical) {
@@ -55,16 +68,12 @@ extension StructuredText {
               let cellRun = columnRuns[columnIndex]
               let cellContent = rowContent[cellRun.range]
 
-              TableCell(cellContent, row: rowIndex, column: columnIndex)
+              StructuredText.TableCell(cellContent, row: rowIndex, column: columnIndex)
                 .gridColumnAlignment(alignment(for: columnIndex))
             }
           }
         }
       }
-    }
-
-    private var indentationLevel: Int {
-      content.runs.first?.presentationIntent?.indentationLevel ?? 0
     }
 
     private func alignment(for columnIndex: Int) -> HorizontalAlignment {

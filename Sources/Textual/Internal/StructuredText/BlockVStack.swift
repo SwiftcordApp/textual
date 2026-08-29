@@ -12,6 +12,7 @@ import SwiftUI
 extension StructuredText {
   struct BlockVStack<Content: View>: View {
     @Environment(\.multilineTextAlignment) private var textAlignment
+    @Environment(\.topLevelBlockSpacing) private var topLevelBlockSpacing
 
     private let content: Content
 
@@ -20,8 +21,20 @@ extension StructuredText {
     }
 
     var body: some View {
+      if let topLevelBlockSpacing {
+        stack(spacingOverride: topLevelBlockSpacing)
+          .environment(\.topLevelBlockSpacing, nil)
+      } else {
+        stack(spacingOverride: nil)
+      }
+    }
+
+    private func stack(spacingOverride: CGFloat?) -> some View {
       Group(subviews: content) { children in
-        BlockVStackLayout(textAlignment: textAlignment) {
+        BlockVStackLayout(
+          textAlignment: textAlignment,
+          spacingOverride: spacingOverride
+        ) {
           ForEach(children) {
             BlockLayoutView($0)
           }
@@ -49,13 +62,16 @@ extension StructuredText {
     }
 
     var body: some View {
-      // Read the block spacing preference and apply it as a layout value
-      content
-        .onPreferenceChange(BlockSpacingKey.self) { @MainActor value in
-          // Override with the resolved list item spacing if enabled
-          blockSpacing = listItemSpacingEnabled ? resolvedListItemSpacing : value
-        }
-        .layoutValue(key: BlockSpacingKey.self, value: blockSpacing)
+      if listItemSpacingEnabled {
+        content.layoutValue(key: BlockSpacingKey.self, value: resolvedListItemSpacing)
+      } else {
+        // Read the block spacing preference and apply it as a layout value
+        content
+          .onPreferenceChange(BlockSpacingKey.self) { @MainActor value in
+            blockSpacing = value
+          }
+          .layoutValue(key: BlockSpacingKey.self, value: blockSpacing)
+      }
     }
   }
 
@@ -75,6 +91,7 @@ extension StructuredText {
     }
 
     let textAlignment: TextAlignment
+    let spacingOverride: CGFloat?
 
     func makeCache(subviews: Subviews) -> Cache {
       return Cache(
@@ -183,6 +200,9 @@ extension StructuredText {
 
     private func spacings(for subviews: Subviews) -> [CGFloat] {
       subviews.indices.dropLast().map { index in
+        if let spacingOverride {
+          return spacingOverride
+        }
         let current = subviews[index]
         let next = subviews[index + 1]
         let currentBottom = current[BlockSpacingKey.self].bottom

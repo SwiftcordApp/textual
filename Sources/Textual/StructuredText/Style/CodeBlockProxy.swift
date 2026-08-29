@@ -28,7 +28,7 @@ extension StructuredText {
         UIPasteboard.general.setItems(
           [
             [
-              UTType.plainText.identifier: formatter.plainText(),
+              UTType.utf8PlainText.identifier: formatter.plainText(),
               UTType.html.identifier: formatter.html(),
             ]
           ]
